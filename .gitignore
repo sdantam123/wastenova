@@ -1,0 +1,27 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+*.swp
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Logs / runtime artifacts
+logs/
+*.log
+*.pid
+
+# OS
+.DS_Store
+
+# Misc scratch/screenshot dumps
+undefined/
