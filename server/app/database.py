@@ -48,9 +48,9 @@ def load_sql_statements(sql_path: str | Path) -> list[str]:
 
 async def initialize_database() -> None:
     """Apply the canonical schema and seed data for a fresh local database."""
-    repo_root = Path(__file__).resolve().parents[2]
-    schema_path = repo_root / "DB" / "schema.sql"
-    seed_path = repo_root / "DB" / "seed.sql"
+    server_root = Path(__file__).resolve().parents[1]
+    schema_path = server_root / "DB" / "schema.sql"
+    seed_path = server_root / "DB" / "seed.sql"
 
     async with engine.begin() as connection:
         await connection.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))

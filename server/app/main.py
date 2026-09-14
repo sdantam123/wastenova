@@ -43,7 +43,8 @@ app.include_router(history.router)
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    await initialize_database()
+    if not settings.skip_db_bootstrap:
+        await initialize_database()
 
 
 @app.get("/health", tags=["health"])
