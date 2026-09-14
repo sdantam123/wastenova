@@ -22,10 +22,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_repo_root = Path(__file__).resolve().parents[2]
+_server_root = Path(__file__).resolve().parents[1]
 app.mount(
     "/static/source-documents",
-    StaticFiles(directory=_repo_root / "DB" / "source-documents"),
+    StaticFiles(directory=_server_root / "static" / "source-documents"),
     name="source-documents",
 )
 
