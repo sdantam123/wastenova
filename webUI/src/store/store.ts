@@ -1,4 +1,5 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { combineReducers, configureStore } from '@reduxjs/toolkit';
+import type { Middleware } from '@reduxjs/toolkit';
 import type { TypedUseSelectorHook } from 'react-redux';
 import { useDispatch, useSelector } from 'react-redux';
 import authReducer from './authSlice';
@@ -8,16 +9,18 @@ import { loadPersistedState, savePersistedState } from './persist';
 
 const persisted = loadPersistedState();
 
+const rootReducer = combineReducers({
+  auth: authReducer,
+  location: locationReducer,
+  [recycleApi.reducerPath]: recycleApi.reducer,
+});
+
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    location: locationReducer,
-    [recycleApi.reducerPath]: recycleApi.reducer,
-  },
+  reducer: rootReducer,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   preloadedState: persisted as any,
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(recycleApi.middleware),
+    getDefaultMiddleware({ serializableCheck: false }).concat(recycleApi.middleware as Middleware),
 });
 
 store.subscribe(() => {

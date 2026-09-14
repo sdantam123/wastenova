@@ -14,7 +14,7 @@ import { useLazyGetPickupScheduleQuery, useLazyResolveByPostalQuery, useGetSourc
 import { useAppSelector } from '../../store/store';
 import {
   format, addDays, addMonths, startOfMonth, endOfMonth, eachDayOfInterval,
-  getDay, isSameDay, isToday, isBefore,
+  getDay, isToday, isBefore,
 } from 'date-fns';
 
 interface PickupEvent {

@@ -519,12 +519,6 @@ function UpcomingEventCard({ event }: { event: UpcomingEvent }) {
   );
 }
 
-function formatFileSize(bytes: number | null): string | null {
-  if (!bytes) return null;
-  const mb = bytes / (1024 * 1024);
-  return `${mb.toFixed(1)} MB`;
-}
-
 const searchableCategories = categoryNavItems.filter((item) => !item.isLocationInfo);
 
 /** Quick-jump search over category names (e.g. "battery", "paint"), with autocomplete suggestions as the user types. Selecting a match navigates to that category's drop-off page. */

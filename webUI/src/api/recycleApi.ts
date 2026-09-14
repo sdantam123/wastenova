@@ -325,7 +325,7 @@ export const recycleApi = createApi({
     }),
 
     getPrograms: builder.query<ServerRecyclingProgram[], ProgramsParams | void>({
-      query: (params) => ({ url: 'programs', params: params ?? undefined }),
+      query: (params) => ({ url: 'programs', params: (params ?? {}) as Record<string, unknown> }),
       providesTags: ['Programs'],
       keepUnusedDataFor: 3600,
     }),
@@ -338,7 +338,7 @@ export const recycleApi = createApi({
     }),
 
     getSourceDocuments: builder.query<ServerSourceDocument[], SourceDocumentsParams | void>({
-      query: (params) => ({ url: 'source-documents', params: params ?? undefined }),
+      query: (params) => ({ url: 'source-documents', params: (params ?? {}) as Record<string, unknown> }),
       keepUnusedDataFor: 3600,
     }),
 
