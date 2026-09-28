@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box, Typography,
@@ -18,7 +18,7 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DirectionsIcon from '@mui/icons-material/Directions';
 import SearchIcon from '@mui/icons-material/Search';
-import { useGetProgramsQuery, useSearchCentersQuery, useGetSourceDocumentsQuery, apiOrigin } from '../../api/recycleApi';
+import { useGetProgramsQuery, useSearchCentersQuery, useGetSourceDocumentsQuery, useLazyGetPickupScheduleQuery, apiOrigin } from '../../api/recycleApi';
 import type { ServerRecyclingProgram } from '../../api/recycleApi';
 import type { DropoffCenter, DropoffCenterHoursEntry } from '../../types/recycling';
 import { categoryNavItems, type CategoryNavItem } from './categoryNav';
@@ -556,6 +556,100 @@ function CategorySearch() {
   );
 }
 
+interface ComingUpItem {
+  key: string;
+  date: Date;
+  label: string;
+  detail?: string;
+  icon: JSX.Element;
+}
+
+const pickupTypeLabel: Record<string, string> = {
+  RECYCLING: 'Recycling pickup',
+  YARD_WASTE: 'Yard waste pickup',
+  CARDBOARD: 'Cardboard pickup',
+  BULK: 'Bulk pickup',
+  GENERAL: 'Trash pickup',
+};
+
+function formatComingUpDate(date: Date): string {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round((date.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
+  if (dayDiff === 0) return 'Today';
+  if (dayDiff === 1) return 'Tomorrow';
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+/** Home page "Coming up" strip: dated drop-off events and curbside pickups in the next 7 days, soonest first. */
+function ComingUpNext7Days() {
+  const active = useAppSelector((s) => s.location.active);
+  const { data: allPrograms = [] } = useGetProgramsQuery(
+    { jurisdictionId: active?.id },
+    { skip: !active },
+  );
+  const [getPickupSchedule, { data: pickupEvents = [] }] = useLazyGetPickupScheduleQuery();
+
+  useEffect(() => {
+    if (!active) return;
+    const today = new Date();
+    const to = new Date(today);
+    to.setDate(to.getDate() + 7);
+    void getPickupSchedule({
+      jurisdictionId: active.id,
+      from: today.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+    });
+  }, [active, getPickupSchedule]);
+
+  const items = useMemo<ComingUpItem[]>(() => {
+    const dropoffEvents = getUpcomingEvents(allPrograms, 7).map(({ program, location, date }): ComingUpItem => ({
+      key: `dropoff-${program.id}-${location.location_name}-${date.toISOString()}`,
+      date,
+      label: location.location_name,
+      detail: program.program_name,
+      icon: <EventIcon fontSize="small" color="primary" />,
+    }));
+
+    const curbsideEvents = pickupEvents.map((event): ComingUpItem => ({
+      key: `curbside-${event.date}-${event.type}`,
+      date: new Date(`${event.date}T00:00:00`),
+      label: pickupTypeLabel[event.type] ?? event.label,
+      icon: <LocalShippingIcon fontSize="small" color="primary" />,
+    }));
+
+    return [...dropoffEvents, ...curbsideEvents].sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [allPrograms, pickupEvents]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5 }}>Coming Up</Typography>
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" rowGap={1.5}>
+        {items.map((item) => (
+          <Box
+            key={item.key}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              border: '1px solid', borderColor: 'divider', borderRadius: 2,
+              px: 1.5, py: 1, minWidth: 200,
+            }}
+          >
+            {item.icon}
+            <Box>
+              <Typography variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {item.label}{item.detail ? ` · ${item.detail}` : ''}
+              </Typography>
+            </Box>
+          </Box>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
 function LocationInfoPanel() {
   const postalCode = useAppSelector((s) => s.location.postalCode);
   const active = useAppSelector((s) => s.location.active);
@@ -569,6 +663,7 @@ function LocationInfoPanel() {
   return (
     <Box>
       <CategorySearch />
+      <ComingUpNext7Days />
       <Box
         component="img"
         src="/home.png"
