@@ -754,24 +754,25 @@ function UpcomingDropoffServices() {
   return (
     <Box sx={{ mb: 3, maxWidth: 480 }}>
       <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Drop-off Services (Next 7 Days)</Typography>
-      <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-        {items.map((item) => (
-          <ListItem key={item.key} disableGutters disablePadding>
-            <ListItemButton onClick={() => navigate(`/programs?category=${item.categoryKey}`)} sx={{ px: 1.5, py: 1, minWidth: 0 }}>
-              <ListItemText
-                sx={{ minWidth: 0 }}
-                primary={(
-                  <Typography variant="body2" noWrap title={`${formatComingUpDate(item.date)} — ${item.label} · ${item.centerName}`}>
-                    <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
-                    {' — '}
-                    {item.label} · {item.centerName}
-                  </Typography>
-                )}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflowX: 'auto' }}>
+        <List dense disablePadding sx={{ width: 'max-content', minWidth: '100%' }}>
+          {items.map((item) => (
+            <ListItem key={item.key} disableGutters disablePadding>
+              <ListItemButton onClick={() => navigate(`/programs?category=${item.categoryKey}`)} sx={{ px: 1.5, py: 1 }}>
+                <ListItemText
+                  primary={(
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                      <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
+                      {' — '}
+                      {item.label} · {item.centerName}
+                    </Typography>
+                  )}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      </Box>
     </Box>
   );
 }
