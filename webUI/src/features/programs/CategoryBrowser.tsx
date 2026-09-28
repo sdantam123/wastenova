@@ -662,8 +662,8 @@ function ComingUpNext7Days() {
     const dropoffEvents = getUpcomingEvents(allPrograms, 7).map(({ program, location, date }): ComingUpItem => ({
       key: `dropoff-${program.id}-${location.location_name}-${date.toISOString()}`,
       date,
-      label: location.location_name,
-      detail: program.program_name,
+      label: program.program_name,
+      detail: location.location_name,
       icon: <EventIcon fontSize="small" color="primary" />,
       categoryKey: categoryKeyForProgram(program),
     }));
@@ -724,9 +724,10 @@ function ComingUpNext7Days() {
                 <ListItemText
                   primary={(
                     <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-                      <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
+                      {formatComingUpDate(item.date)}
                       {' — '}
-                      {item.detail ? `${item.label} · ${item.detail}` : item.label}
+                      <Typography component="span" variant="body2" fontWeight={700}>{item.label}</Typography>
+                      {item.detail ? ` · ${item.detail}` : ''}
                     </Typography>
                   )}
                 />
