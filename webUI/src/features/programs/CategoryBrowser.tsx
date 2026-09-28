@@ -618,6 +618,16 @@ function formatComingUpDate(date: Date): string {
 }
 
 /** Home page "Coming up" strip: dated drop-off events and curbside pickups in the next 7 days, soonest first. */
+// Categories backed by standing drop-off centers on a recurring schedule
+// (e.g. Cooking Oil, only described in center hours notes, never tagged as
+// a material and never a dated event) rather than one-off dated events, so
+// they'd never surface via getUpcomingEvents. A center with no hours rows
+// at all (e.g. a 24/7 police-department drop box) has no schedule to check
+// against a 7-day window, so those are intentionally excluded here rather
+// than shown as "always coming up."
+const ongoingServiceCategories = categoryNavItems.filter((item) => !item.isLocationInfo && !item.linkTo && item.keywords.length > 0);
+const ongoingServiceSearchTerm = ongoingServiceCategories.flatMap((item) => item.keywords).join(',');
+
 function ComingUpNext7Days() {
   const navigate = useNavigate();
   const active = useAppSelector((s) => s.location.active);
@@ -626,6 +636,10 @@ function ComingUpNext7Days() {
     { skip: !active },
   );
   const [getPickupSchedule, { data: pickupEvents = [] }] = useLazyGetPickupScheduleQuery();
+  const { data: centers = [] } = useSearchCentersQuery(
+    { q: ongoingServiceSearchTerm, jurisdictionId: active?.id },
+    { skip: !ongoingServiceSearchTerm },
+  );
 
   useEffect(() => {
     if (!active) return;
@@ -664,8 +678,27 @@ function ComingUpNext7Days() {
       }))
       .filter((item) => item.date >= startOfToday && item.date <= windowEnd);
 
-    return [...dropoffEvents, ...curbsideEvents].sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [allPrograms, pickupEvents]);
+    const serviceEvents: ComingUpItem[] = [];
+    for (const category of ongoingServiceCategories) {
+      let soonest: { date: Date; centerName: string } | null = null;
+      for (const center of centers) {
+        const nextDate = nextOpenDateWithin(center.hoursDetail, category.keywords, startOfToday, 7);
+        if (nextDate && (!soonest || nextDate < soonest.date)) soonest = { date: nextDate, centerName: center.name };
+      }
+      if (soonest) {
+        serviceEvents.push({
+          key: `service-${category.key}`,
+          date: soonest.date,
+          label: category.label,
+          detail: soonest.centerName,
+          icon: <StorefrontIcon fontSize="small" color="primary" />,
+          categoryKey: category.key,
+        });
+      }
+    }
+
+    return [...dropoffEvents, ...curbsideEvents, ...serviceEvents].sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [allPrograms, pickupEvents, centers]);
 
   if (items.length === 0) return null;
 
@@ -706,79 +739,6 @@ function ComingUpNext7Days() {
   );
 }
 
-// Categories backed by standing drop-off centers rather than dated events
-// Categories backed by standing drop-off centers on a recurring schedule
-// (e.g. Cooking Oil, only described in center hours notes, never tagged as
-// a material and never a dated event) rather than one-off dated events, so
-// they never show up in Coming Up on their own. A center with no hours
-// rows at all (e.g. a 24/7 police-department drop box) has no schedule to
-// check against a 7-day window, so those are intentionally excluded here
-// rather than shown as "always coming up."
-const ongoingServiceCategories = categoryNavItems.filter((item) => !item.isLocationInfo && !item.linkTo && item.keywords.length > 0);
-const ongoingServiceSearchTerm = ongoingServiceCategories.flatMap((item) => item.keywords).join(',');
-
-interface UpcomingServiceItem {
-  key: string;
-  date: Date;
-  categoryKey: string;
-  label: string;
-  centerName: string;
-}
-
-function UpcomingDropoffServices() {
-  const navigate = useNavigate();
-  const activeJurisdictionId = useAppSelector((s) => s.location.active?.id);
-  const { data: centers = [] } = useSearchCentersQuery(
-    { q: ongoingServiceSearchTerm, jurisdictionId: activeJurisdictionId },
-    { skip: !ongoingServiceSearchTerm },
-  );
-
-  const items = useMemo<UpcomingServiceItem[]>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const results: UpcomingServiceItem[] = [];
-    for (const category of ongoingServiceCategories) {
-      let soonest: { date: Date; centerName: string } | null = null;
-      for (const center of centers) {
-        const nextDate = nextOpenDateWithin(center.hoursDetail, category.keywords, today, 7);
-        if (nextDate && (!soonest || nextDate < soonest.date)) soonest = { date: nextDate, centerName: center.name };
-      }
-      if (soonest) {
-        results.push({ key: category.key, date: soonest.date, categoryKey: category.key, label: category.label, centerName: soonest.centerName });
-      }
-    }
-    return results.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [centers]);
-
-  if (items.length === 0) return null;
-
-  return (
-    <Box sx={{ mb: 3, maxWidth: 720 }}>
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Drop-off Services (Next 7 Days)</Typography>
-      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflowX: 'auto' }}>
-        <List dense disablePadding sx={{ width: 'max-content', minWidth: '100%' }}>
-          {items.map((item) => (
-            <ListItem key={item.key} disableGutters disablePadding>
-              <ListItemButton onClick={() => navigate(`/programs?category=${item.categoryKey}`)} sx={{ px: 1.5, py: 1 }}>
-                <ListItemText
-                  primary={(
-                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-                      <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
-                      {' — '}
-                      {item.label} · {item.centerName}
-                    </Typography>
-                  )}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      </Box>
-    </Box>
-  );
-}
-
 function LocationInfoPanel() {
   const postalCode = useAppSelector((s) => s.location.postalCode);
   const active = useAppSelector((s) => s.location.active);
@@ -793,7 +753,6 @@ function LocationInfoPanel() {
     <Box>
       <CategorySearch />
       <ComingUpNext7Days />
-      <UpcomingDropoffServices />
       <Box
         component="img"
         src="/home.png"
