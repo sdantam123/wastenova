@@ -720,6 +720,7 @@ interface UpcomingServiceItem {
   date: Date;
   categoryKey: string;
   label: string;
+  centerName: string;
 }
 
 function UpcomingDropoffServices() {
@@ -736,13 +737,13 @@ function UpcomingDropoffServices() {
 
     const results: UpcomingServiceItem[] = [];
     for (const category of ongoingServiceCategories) {
-      let soonest: Date | null = null;
+      let soonest: { date: Date; centerName: string } | null = null;
       for (const center of centers) {
         const nextDate = nextOpenDateWithin(center.hoursDetail, category.keywords, today, 7);
-        if (nextDate && (!soonest || nextDate < soonest)) soonest = nextDate;
+        if (nextDate && (!soonest || nextDate < soonest.date)) soonest = { date: nextDate, centerName: center.name };
       }
       if (soonest) {
-        results.push({ key: category.key, date: soonest, categoryKey: category.key, label: category.label });
+        results.push({ key: category.key, date: soonest.date, categoryKey: category.key, label: category.label, centerName: soonest.centerName });
       }
     }
     return results.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -762,7 +763,7 @@ function UpcomingDropoffServices() {
                   <Typography variant="body2">
                     <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
                     {' — '}
-                    {item.label}
+                    {item.label} · {item.centerName}
                   </Typography>
                 )}
               />
