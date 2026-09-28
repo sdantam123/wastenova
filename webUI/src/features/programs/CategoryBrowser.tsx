@@ -624,28 +624,29 @@ function ComingUpNext7Days() {
   if (items.length === 0) return null;
 
   return (
-    <Box sx={{ mb: 3 }}>
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5 }}>Coming Up</Typography>
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" rowGap={1.5}>
-        {items.map((item) => (
-          <Box
+    <Box sx={{ mb: 3, maxWidth: 480 }}>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Coming Up</Typography>
+      <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+        {items.map((item, index) => (
+          <ListItem
             key={item.key}
+            disableGutters
             sx={{
-              display: 'flex', alignItems: 'center', gap: 1,
-              border: '1px solid', borderColor: 'divider', borderRadius: 2,
-              px: 1.5, py: 1, minWidth: 200,
+              px: 1.5, py: 1,
+              borderTop: index === 0 ? 'none' : '1px solid',
+              borderColor: 'divider',
             }}
           >
-            {item.icon}
-            <Box>
-              <Typography variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {item.label}{item.detail ? ` · ${item.detail}` : ''}
-              </Typography>
-            </Box>
-          </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', mr: 1.5 }}>{item.icon}</Box>
+            <ListItemText
+              primary={formatComingUpDate(item.date)}
+              secondary={item.detail ? `${item.label} · ${item.detail}` : item.label}
+              primaryTypographyProps={{ variant: 'body2', fontWeight: 700 }}
+              secondaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+            />
+          </ListItem>
         ))}
-      </Stack>
+      </List>
     </Box>
   );
 }
