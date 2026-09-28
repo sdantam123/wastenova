@@ -22,7 +22,9 @@ export function CategorySidebar({ open, variant = 'permanent', onClose }: Catego
   const navigate = useNavigate();
   const location = useLocation();
   const activeParams = new URLSearchParams(location.search);
-  const activeCategory = location.pathname === '/programs' ? activeParams.get('category') : null;
+  const activeCategory = location.pathname === '/programs'
+    ? activeParams.get('category')
+    : categoryNavItems.find((item) => item.linkTo === location.pathname)?.key ?? null;
 
   const handleClick = (key: string, linkTo?: string) => {
     if (linkTo) {
