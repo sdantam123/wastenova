@@ -678,6 +678,46 @@ function ComingUpNext7Days() {
   );
 }
 
+// Categories backed by standing drop-off centers rather than dated events
+// (e.g. Cooking Oil, which is only described in center hours notes, not
+// tagged as a material at all) — these never show up in Coming Up, so they
+// get their own always-available list on the Home page.
+const ongoingServiceCategories = categoryNavItems.filter((item) => !item.isLocationInfo && !item.linkTo && item.keywords.length > 0);
+const ongoingServiceSearchTerm = ongoingServiceCategories.flatMap((item) => item.keywords).join(',');
+
+function OngoingDropoffServices() {
+  const navigate = useNavigate();
+  const activeJurisdictionId = useAppSelector((s) => s.location.active?.id);
+  const { data: centers = [] } = useSearchCentersQuery(
+    { q: ongoingServiceSearchTerm, jurisdictionId: activeJurisdictionId },
+    { skip: !ongoingServiceSearchTerm },
+  );
+
+  const availableCategories = useMemo(
+    () => ongoingServiceCategories.filter((item) => centers.some((center) => (
+      matchesKeywords([center.acceptedMaterials.join(' '), ...(center.hoursDetail?.map((h) => h.notes) ?? [])], item.keywords)
+    ))),
+    [centers],
+  );
+
+  if (availableCategories.length === 0) return null;
+
+  return (
+    <Box sx={{ mb: 3, maxWidth: 480 }}>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Drop-off Services</Typography>
+      <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+        {availableCategories.map((item) => (
+          <ListItem key={item.key} disableGutters disablePadding>
+            <ListItemButton onClick={() => navigate(`/programs?category=${item.key}`)} sx={{ px: 1.5, py: 1 }}>
+              <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2' }} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  );
+}
+
 function LocationInfoPanel() {
   const postalCode = useAppSelector((s) => s.location.postalCode);
   const active = useAppSelector((s) => s.location.active);
@@ -692,6 +732,7 @@ function LocationInfoPanel() {
     <Box>
       <CategorySearch />
       <ComingUpNext7Days />
+      <OngoingDropoffServices />
       <Box
         component="img"
         src="/home.png"
