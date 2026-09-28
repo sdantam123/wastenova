@@ -603,6 +603,11 @@ function ComingUpNext7Days() {
   }, [active, getPickupSchedule]);
 
   const items = useMemo<ComingUpItem[]>(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const windowEnd = new Date(startOfToday);
+    windowEnd.setDate(windowEnd.getDate() + 7);
+
     const dropoffEvents = getUpcomingEvents(allPrograms, 7).map(({ program, location, date }): ComingUpItem => ({
       key: `dropoff-${program.id}-${location.location_name}-${date.toISOString()}`,
       date,
@@ -611,12 +616,14 @@ function ComingUpNext7Days() {
       icon: <EventIcon fontSize="small" color="primary" />,
     }));
 
-    const curbsideEvents = pickupEvents.map((event): ComingUpItem => ({
-      key: `curbside-${event.date}-${event.type}`,
-      date: new Date(`${event.date}T00:00:00`),
-      label: pickupTypeLabel[event.type] ?? event.label,
-      icon: <LocalShippingIcon fontSize="small" color="primary" />,
-    }));
+    const curbsideEvents = pickupEvents
+      .map((event): ComingUpItem => ({
+        key: `curbside-${event.date}-${event.type}`,
+        date: new Date(`${event.date}T00:00:00`),
+        label: pickupTypeLabel[event.type] ?? event.label,
+        icon: <LocalShippingIcon fontSize="small" color="primary" />,
+      }))
+      .filter((item) => item.date >= startOfToday && item.date <= windowEnd);
 
     return [...dropoffEvents, ...curbsideEvents].sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [allPrograms, pickupEvents]);
