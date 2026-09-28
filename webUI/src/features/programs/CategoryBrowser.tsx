@@ -299,6 +299,32 @@ function nextOpenDescriptionFor(hoursDetail: DropoffCenterHoursEntry[] | undefin
   return null;
 }
 
+/**
+ * Finds the soonest date within `windowDays` (inclusive of today) on which
+ * any of a center's hours rows matching `categoryKeywords` actually apply —
+ * day-of-week, week-of-month rotation, and seasonal range all respected.
+ * Unlike relevantHoursFor, this never falls back to unrelated categories'
+ * hours: a center only counts for a category if it has a row that actually
+ * mentions that category's keywords in its notes.
+ */
+function nextOpenDateWithin(hoursDetail: DropoffCenterHoursEntry[] | undefined, categoryKeywords: string[], today: Date, windowDays: number): Date | null {
+  if (!hoursDetail || hoursDetail.length === 0) return null;
+  const candidates = hoursDetail.filter((entry) => matchesKeywords([entry.notes], categoryKeywords));
+  if (candidates.length === 0) return null;
+
+  for (let offset = 0; offset <= windowDays; offset += 1) {
+    const date = new Date(today);
+    date.setDate(date.getDate() + offset);
+    const matches = candidates.some((entry) => (
+      entry.dayOfWeek === date.getDay()
+      && matchesCurrentWeek(entry, date)
+      && isWithinSeasonalRange(entry, date)
+    ));
+    if (matches) return date;
+  }
+  return null;
+}
+
 function CenterCard({ center, categoryKeywords, highlighted, zipMatch }: { center: DropoffCenter; categoryKeywords?: string[]; highlighted?: boolean; zipMatch?: boolean }) {
   // hoursDetail keeps one row per (day, note) combination, e.g. a center that
   // does tire drop-off Mon-Fri and paint drop-off only the 1st Saturday has
@@ -679,13 +705,24 @@ function ComingUpNext7Days() {
 }
 
 // Categories backed by standing drop-off centers rather than dated events
-// (e.g. Cooking Oil, which is only described in center hours notes, not
-// tagged as a material at all) — these never show up in Coming Up, so they
-// get their own always-available list on the Home page.
+// Categories backed by standing drop-off centers on a recurring schedule
+// (e.g. Cooking Oil, only described in center hours notes, never tagged as
+// a material and never a dated event) rather than one-off dated events, so
+// they never show up in Coming Up on their own. A center with no hours
+// rows at all (e.g. a 24/7 police-department drop box) has no schedule to
+// check against a 7-day window, so those are intentionally excluded here
+// rather than shown as "always coming up."
 const ongoingServiceCategories = categoryNavItems.filter((item) => !item.isLocationInfo && !item.linkTo && item.keywords.length > 0);
 const ongoingServiceSearchTerm = ongoingServiceCategories.flatMap((item) => item.keywords).join(',');
 
-function OngoingDropoffServices() {
+interface UpcomingServiceItem {
+  key: string;
+  date: Date;
+  categoryKey: string;
+  label: string;
+}
+
+function UpcomingDropoffServices() {
   const navigate = useNavigate();
   const activeJurisdictionId = useAppSelector((s) => s.location.active?.id);
   const { data: centers = [] } = useSearchCentersQuery(
@@ -693,23 +730,42 @@ function OngoingDropoffServices() {
     { skip: !ongoingServiceSearchTerm },
   );
 
-  const availableCategories = useMemo(
-    () => ongoingServiceCategories.filter((item) => centers.some((center) => (
-      matchesKeywords([center.acceptedMaterials.join(' '), ...(center.hoursDetail?.map((h) => h.notes) ?? [])], item.keywords)
-    ))),
-    [centers],
-  );
+  const items = useMemo<UpcomingServiceItem[]>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  if (availableCategories.length === 0) return null;
+    const results: UpcomingServiceItem[] = [];
+    for (const category of ongoingServiceCategories) {
+      let soonest: Date | null = null;
+      for (const center of centers) {
+        const nextDate = nextOpenDateWithin(center.hoursDetail, category.keywords, today, 7);
+        if (nextDate && (!soonest || nextDate < soonest)) soonest = nextDate;
+      }
+      if (soonest) {
+        results.push({ key: category.key, date: soonest, categoryKey: category.key, label: category.label });
+      }
+    }
+    return results.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [centers]);
+
+  if (items.length === 0) return null;
 
   return (
     <Box sx={{ mb: 3, maxWidth: 480 }}>
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Drop-off Services</Typography>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Drop-off Services (Next 7 Days)</Typography>
       <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-        {availableCategories.map((item) => (
+        {items.map((item) => (
           <ListItem key={item.key} disableGutters disablePadding>
-            <ListItemButton onClick={() => navigate(`/programs?category=${item.key}`)} sx={{ px: 1.5, py: 1 }}>
-              <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2' }} />
+            <ListItemButton onClick={() => navigate(`/programs?category=${item.categoryKey}`)} sx={{ px: 1.5, py: 1 }}>
+              <ListItemText
+                primary={(
+                  <Typography variant="body2">
+                    <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
+                    {' — '}
+                    {item.label}
+                  </Typography>
+                )}
+              />
             </ListItemButton>
           </ListItem>
         ))}
@@ -732,7 +788,7 @@ function LocationInfoPanel() {
     <Box>
       <CategorySearch />
       <ComingUpNext7Days />
-      <OngoingDropoffServices />
+      <UpcomingDropoffServices />
       <Box
         component="img"
         src="/home.png"
