@@ -634,22 +634,17 @@ function ComingUpNext7Days() {
     <Box sx={{ mb: 3, maxWidth: 480 }}>
       <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Coming Up</Typography>
       <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-        {items.map((item, index) => (
-          <ListItem
-            key={item.key}
-            disableGutters
-            sx={{
-              px: 1.5, py: 1,
-              borderTop: index === 0 ? 'none' : '1px solid',
-              borderColor: 'divider',
-            }}
-          >
+        {items.map((item) => (
+          <ListItem key={item.key} disableGutters sx={{ px: 1.5, py: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mr: 1.5 }}>{item.icon}</Box>
             <ListItemText
-              primary={formatComingUpDate(item.date)}
-              secondary={item.detail ? `${item.label} · ${item.detail}` : item.label}
-              primaryTypographyProps={{ variant: 'body2', fontWeight: 700 }}
-              secondaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+              primary={(
+                <Typography variant="body2">
+                  <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
+                  {' — '}
+                  {item.detail ? `${item.label} · ${item.detail}` : item.label}
+                </Typography>
+              )}
             />
           </ListItem>
         ))}
