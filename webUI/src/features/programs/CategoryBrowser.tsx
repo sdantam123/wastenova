@@ -757,10 +757,11 @@ function UpcomingDropoffServices() {
       <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
         {items.map((item) => (
           <ListItem key={item.key} disableGutters disablePadding>
-            <ListItemButton onClick={() => navigate(`/programs?category=${item.categoryKey}`)} sx={{ px: 1.5, py: 1 }}>
+            <ListItemButton onClick={() => navigate(`/programs?category=${item.categoryKey}`)} sx={{ px: 1.5, py: 1, minWidth: 0 }}>
               <ListItemText
+                sx={{ minWidth: 0 }}
                 primary={(
-                  <Typography variant="body2">
+                  <Typography variant="body2" noWrap title={`${formatComingUpDate(item.date)} — ${item.label} · ${item.centerName}`}>
                     <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
                     {' — '}
                     {item.label} · {item.centerName}
