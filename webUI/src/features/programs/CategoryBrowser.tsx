@@ -4,7 +4,7 @@ import {
   Box, Typography,
   Chip, Accordion, AccordionSummary, AccordionDetails,
   Stack, Alert, CircularProgress,
-  List, ListItem, ListItemText, Divider, Link as MuiLink,
+  List, ListItem, ListItemButton, ListItemText, Divider, Link as MuiLink,
   Autocomplete, TextField,
 } from '@mui/material';
 import { useJsApiLoader } from '@react-google-maps/api';
@@ -562,6 +562,16 @@ interface ComingUpItem {
   label: string;
   detail?: string;
   icon: JSX.Element;
+  /** Category nav item to navigate to when this row is clicked, e.g. 'curbside' or 'paper-shredding'. */
+  categoryKey?: string;
+}
+
+/** Finds the category nav item whose keywords match a program, so a Coming Up row can link to its category page. */
+function categoryKeyForProgram(program: ServerRecyclingProgram): string | undefined {
+  return categoryNavItems.find((item) => (
+    item.keywords.length > 0
+    && matchesKeywords([program.material_category, program.program_name, program.organization, ...(program.accepts ?? [])], item.keywords)
+  ))?.key;
 }
 
 const pickupTypeLabel: Record<string, string> = {
@@ -583,6 +593,7 @@ function formatComingUpDate(date: Date): string {
 
 /** Home page "Coming up" strip: dated drop-off events and curbside pickups in the next 7 days, soonest first. */
 function ComingUpNext7Days() {
+  const navigate = useNavigate();
   const active = useAppSelector((s) => s.location.active);
   const { data: allPrograms = [] } = useGetProgramsQuery(
     { jurisdictionId: active?.id },
@@ -614,6 +625,7 @@ function ComingUpNext7Days() {
       label: location.location_name,
       detail: program.program_name,
       icon: <EventIcon fontSize="small" color="primary" />,
+      categoryKey: categoryKeyForProgram(program),
     }));
 
     const curbsideEvents = pickupEvents
@@ -622,6 +634,7 @@ function ComingUpNext7Days() {
         date: new Date(`${event.date}T00:00:00`),
         label: pickupTypeLabel[event.type] ?? event.label,
         icon: <LocalShippingIcon fontSize="small" color="primary" />,
+        categoryKey: 'curbside',
       }))
       .filter((item) => item.date >= startOfToday && item.date <= windowEnd);
 
@@ -630,22 +643,34 @@ function ComingUpNext7Days() {
 
   if (items.length === 0) return null;
 
+  const handleItemClick = (categoryKey?: string) => {
+    if (!categoryKey) return;
+    const navItem = categoryNavItems.find((item) => item.key === categoryKey);
+    navigate(navItem?.linkTo ?? `/programs?category=${categoryKey}`);
+  };
+
   return (
     <Box sx={{ mb: 3, maxWidth: 480 }}>
       <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Coming Up (Next 7 Days)</Typography>
       <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
         {items.map((item) => (
-          <ListItem key={item.key} disableGutters sx={{ px: 1.5, py: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mr: 1.5 }}>{item.icon}</Box>
-            <ListItemText
-              primary={(
-                <Typography variant="body2">
-                  <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
-                  {' — '}
-                  {item.detail ? `${item.label} · ${item.detail}` : item.label}
-                </Typography>
-              )}
-            />
+          <ListItem key={item.key} disableGutters disablePadding>
+            <ListItemButton
+              onClick={() => handleItemClick(item.categoryKey)}
+              disabled={!item.categoryKey}
+              sx={{ px: 1.5, py: 1 }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mr: 1.5 }}>{item.icon}</Box>
+              <ListItemText
+                primary={(
+                  <Typography variant="body2">
+                    <Typography component="span" variant="body2" fontWeight={700}>{formatComingUpDate(item.date)}</Typography>
+                    {' — '}
+                    {item.detail ? `${item.label} · ${item.detail}` : item.label}
+                  </Typography>
+                )}
+              />
+            </ListItemButton>
           </ListItem>
         ))}
       </List>
