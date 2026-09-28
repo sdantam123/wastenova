@@ -632,7 +632,7 @@ function ComingUpNext7Days() {
 
   return (
     <Box sx={{ mb: 3, maxWidth: 480 }}>
-      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Coming Up</Typography>
+      <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Coming Up (Next 7 Days)</Typography>
       <List dense disablePadding sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
         {items.map((item) => (
           <ListItem key={item.key} disableGutters sx={{ px: 1.5, py: 1 }}>
